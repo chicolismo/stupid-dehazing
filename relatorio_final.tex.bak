@@ -1,0 +1,33 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage[left=1.5cm,right=1.5cm,top=2cm,bottom=2cm]{geometry}
+\title{Dehazing Using Dark Channel Prior}
+\author{Carlos F. Pinheiro \and Marcelo Andrighetto Foltz}
+\date{}
+\setcounter{section}{0}
+\begin{document}
+
+\maketitle
+
+\begin{multicols*}{2}
+
+\section{Introdução}
+
+\textit{Hazing} ou enevoamento de uma imagem é um
+
+O modelo que descreve a formação de uma imagem com ``névoa'' é:
+
+
+\begin{equation}
+I\left(x\right) = J\left(x\right)t\left(x\right) + A\left(1 - t\left(x\right)\right)
+\end{equation}
+
+
+\end{multicols*}
+\end{document}
