@@ -414,8 +414,8 @@ int main(int argc, char **argv) {
     Mat original_image = imread("img/" + filename);
     Mat result = dehaze(original_image);
 
-    imshow(original_image_window, original_image);
     imshow(result_window, result);
+    imshow(original_image_window, original_image);
 
     imwrite("img/output_" + filename, result);
 
