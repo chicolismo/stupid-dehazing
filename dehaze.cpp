@@ -404,6 +404,9 @@ int main(int argc, char **argv) {
     const double eps = 1e-3; // epsilon default para o filtro
 
     std::string filename{"test0.jpg"};
+    if (argc > 0) {
+        filename = argv[1];
+    }
 
     std::string original_image_window{"Original Image"};
     std::string result_window{"Result"};
