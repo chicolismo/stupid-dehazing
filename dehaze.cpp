@@ -308,15 +308,15 @@ Scalar get_atmosphere(const Mat &image) {
 // 1 - omega * dark_channel(I / A, w)
 Mat get_transmission(const Mat &dark_channel, const Scalar A, const double omega) {
 
-    double max_A; // O maior canal de luz atmosférica
-    if (A[0] > A[1] && A[0] > A[2]) {
-        max_A = A[0];
+    double min_A; // O maior canal de luz atmosférica
+    if (A[0] < A[1] && A[0] < A[2]) {
+        min_A = A[0];
     }
-    else if (A[1] > A[2]) {
-        max_A = A[1];
+    else if (A[1] < A[2]) {
+        min_A = A[1];
     }
     else {
-        max_A = A[2];
+        min_A = A[2];
     }
 
     const cv::Size size = dark_channel.size();
@@ -329,7 +329,7 @@ Mat get_transmission(const Mat &dark_channel, const Scalar A, const double omega
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             transmission.at<unsigned char>(i, j) = (1.0 - omega * dark_channel.at<unsigned char>(i,
-                                                    j) / max_A) * 255;
+                                                    j) / min_A) * 255;
         }
     }
 
@@ -374,28 +374,6 @@ Mat get_radiance(const Mat &image, const Scalar A, const Mat transmission) {
     return std::move(output);
 }
 
-Mat dehaze(const Mat &image, int A_max = 220, double omega = 0.95, int w = 15, int r = 40, double eps = 1e-3) {
-    Mat dark_channel = get_dark_channel(image, w);
-
-    Scalar A = get_atmosphere(image);
-    // Compara com o Threshold da luz atmosférica
-    for (int i = 0; i < 3; ++i) {
-        if (A[i] > A_max) {
-            A[i] = A_max;
-        }
-    }
-
-    Mat transmission = get_transmission(dark_channel, A, omega);
-    Mat refined_transmission = Mat::zeros(transmission.size(), transmission.type());
-    double t_min = 255.0 * 0.2;
-    refined_transmission = Scalar::all(t_min);
-    max(transmission, refined_transmission, refined_transmission);
-    Mat guided_transmission = guidedFilter(image, refined_transmission, r, eps);
-    Mat result = get_radiance(image, A, guided_transmission);
-
-    return std::move(result);
-}
-
 int main(int argc, char **argv) {
     const int w = 15; // O tamanho de cada patch para cálculo do dark channel
     const int A_max = 220; // Threshold da luz atmosférica
@@ -409,18 +387,56 @@ int main(int argc, char **argv) {
     }
 
     std::string original_image_window{"Original Image"};
+    std::string dark_channel_window{"Dark channel"};
+    std::string transmission_window{"Transmission"};
+    std::string refined_transmission_window{"Refined Transmission"};
     std::string result_window{"Result"};
 
     namedWindow(original_image_window);
+    namedWindow(dark_channel_window);
+    namedWindow(transmission_window);
+    namedWindow(refined_transmission_window);
     namedWindow(result_window);
 
+    // Lê a imagem
     Mat original_image = imread("img/" + filename);
-    Mat result = dehaze(original_image);
-
-    imshow(result_window, result);
     imshow(original_image_window, original_image);
 
+    // Obtém o dark channel
+    Mat dark_channel = get_dark_channel(original_image, w);
+    imwrite("img/output_dark_channel_" + filename, dark_channel);
+    imshow(dark_channel_window, dark_channel);
+
+    // Estima a luz atmosférica global
+    Scalar A = get_atmosphere(original_image);
+    for (int i = 0; i < 3; ++i) {
+        if (A[i] > A_max) {
+            A[i] = A_max;
+        }
+    }
+
+    // Estima a transmissão
+    Mat transmission = get_transmission(dark_channel, A, omega);
+    Mat min_transmission = Mat::zeros(transmission.size(), transmission.type());
+    double t_min = 255.0 * 0.2;
+    min_transmission = Scalar::all(t_min);
+    max(transmission, min_transmission, min_transmission);
+    imwrite("img/output_transmission_" + filename, min_transmission);
+    imshow(transmission_window, min_transmission);
+
+    // Refina a transmissão, usando Guided Filter
+    //
+    // Guided Filter usa uma imagem como referência para filtrar outra,
+    // nesse caso é usada a imagem original para suavizar a transmissão
+    // sem perder os contornos da imagem original.
+    Mat guided_transmission = guidedFilter(original_image, min_transmission, r, eps);
+    imwrite("img/output_refined_transmission_" + filename, guided_transmission);
+    imshow(refined_transmission_window, guided_transmission);
+
+    // Obtém a radiância da cena
+    Mat result = get_radiance(original_image, A, guided_transmission);
     imwrite("img/output_" + filename, result);
+    imshow(result_window, result);
 
     waitKey(0);
     return 0;
